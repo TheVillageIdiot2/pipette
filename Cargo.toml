@@ -1,0 +1,6 @@
+[package]
+name = "pipette"
+version = "0.1.0"
+authors = ["Jacob Henry <jakehenry.tn@gmail.com>"]
+
+[dependencies]
