@@ -4,3 +4,19 @@ version = "0.1.0"
 authors = ["Jacob Henry <jakehenry.tn@gmail.com>"]
 
 [dependencies]
+daemonize = "0.2.3"
+log = "0.4.1"
+unix_socket = "0.5.0"
+os_pipe = "0.6.0"
+clap = "2.31.1"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+
+[[bin]]
+name = "pipette-daemon"
+path = "src/daemon/main.rs"
+
+[[bin]]
+name = "pipette"
+path = "src/client/main.rs"
