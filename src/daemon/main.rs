@@ -5,11 +5,17 @@ extern crate unix_socket;
 extern crate serde;
 extern crate serde_json;
 
+extern crate pipette;
+
 use daemonize::{Daemonize};
 
-use unix_socket::{UnixStream, UnixListener};
+//use unix_socket::{UnixStream, UnixListener};
+use std::os::unix::net::{UnixStream, UnixListener};
+
+use pipette::ipc::{ClientRequestHeader, DaemonResponse};
 
 use std::thread;
+
 
 fn main() {
     println!("Hello world!");
@@ -39,7 +45,7 @@ fn ipc_loop() {
             Ok(stream) => {
                 thread::spawn(|| handle_ipc_stream(stream));
             }
-            Err(err) => {
+            Err(_) => {
                 error!("Stream connection failed");
                 break;
             }
@@ -48,4 +54,14 @@ fn ipc_loop() {
 }
 
 fn handle_ipc_stream(stream : UnixStream) {
+    // Get the message header
+    let msg_header : ClientRequestHeader = serde_json::from_reader(stream).expect("Failed to parse pipette message header");
+
+    // Operate based on it
+    match msg_header {
+        ClientRequestHeader::ReadFromSpout(name) => (),
+        ClientRequestHeader::WriteToSink(name) => (),
+        ClientRequestHeader::CreatePipePair(name) => (),
+        ClientRequestHeader::DestroyPipePair(name) => (),
+    }
 }

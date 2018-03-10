@@ -1,15 +1,15 @@
 
 #[derive(Serialize, Deserialize)]
 pub enum ClientRequestHeader {
-    ReadFromSpout { name : String },  
-    WriteToSink { name : String },
-    CreatePipePair { name : String },
-    DestroyPipePair { name : String },
+    ReadFromSpout(String),  
+    WriteToSink(String),
+    CreatePipePair(String),
+    DestroyPipePair(String),
 }
 
 #[derive(Serialize, Deserialize)]
 pub enum DaemonResponse {
     Confirm,
-    Deny
+    Deny(String),
 }
 
