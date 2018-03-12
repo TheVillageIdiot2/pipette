@@ -1,5 +1,4 @@
 extern crate daemonize;
-extern crate unix_socket;
 #[macro_use] extern crate log;
 
 extern crate serde;
@@ -59,9 +58,11 @@ fn handle_ipc_stream(stream : UnixStream) {
 
     // Operate based on it
     match msg_header {
-        ClientRequestHeader::ReadFromSpout(name) => (),
-        ClientRequestHeader::WriteToSink(name) => (),
-        ClientRequestHeader::CreatePipePair(name) => (),
-        ClientRequestHeader::DestroyPipePair(name) => (),
+        ClientRequestHeader::ReadFromSpout(name) => println!("{}", name),
+        ClientRequestHeader::WriteToSink(name) => println!("{}", name),
+        ClientRequestHeader::CreatePipePair(name) => println!("{}", name),
+        ClientRequestHeader::DestroyPipePair(name) => println!("{}", name),
     }
 }
+
+

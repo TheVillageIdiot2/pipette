@@ -1,19 +1,23 @@
 extern crate clap;
 extern crate serde;
 extern crate serde_json;
-extern crate unix_socket;
 
 extern crate pipette;
 
-use clap::{Arg, App, ArgGroup};
+use clap::{App, ArgGroup};
 
-use std::io::Write;
+use std::os::unix::net::{UnixStream};
 
-use pipette::ipc::{DaemonResponse, ClientRequestHeader};
+use pipette::ipc::*;
+
+enum ConnectionErrors {
+    RequestDenied(String),
+    ConnectionFailed,
+}
 
 fn main() {
     /* Read in args and send requests as necessary */
-    let matches = App::with_defaults("Pipette Client")
+    let matches = App::new("Pipette Client")
         // Args for creating and destroying pipes
         .args_from_usage(
             "--create [name]    'Create a new pipe-pair'
@@ -36,6 +40,7 @@ fn main() {
     if let Some(pipe_name) = matches.value_of("create") {
         //if the_pipe_DNE
         println!("Creating pipe {}", pipe_name);
+        create_pipe(pipe_name);
     }
     
     //Read case
@@ -53,43 +58,45 @@ fn main() {
     }
 }
 
-enum ConnectionErrors {
-    RequestDenied(DaemonResponse::Deny),
-    ConnectionFailed,
-}
 
-fn init_connection(request : ClientRequestHeader) -> Result<unix_socket::UnixStream, ConnectionErrors> {
-    // Convert to serialized message
-    let serialized = serde_json::to_string(&request).expect("Failed to serialize request header");
-
+fn init_connection(request : ClientRequestHeader) -> Result<UnixStream, ConnectionErrors> {
     // Connect to daemon
-    if let Ok(mut stream) = unix_socket::UnixStream::connect("/tmp/pipette/ipc_socket") {
-        // Send our request
-        stream.write_all(serialized.as_bytes()).expect("Failed to send request header");
+    if let Ok(mut stream) = UnixStream::connect("/tmp/pipette/ipc_socket") {
+        //Send request
+        send_request_header(request, &mut stream);
 
         // Get back response
-        let response : DaemonResponse = serde_json::from_reader(stream).expect("Failed to deserialize response header");
+        let response = read_response_header(&mut stream);
         match response {
             DaemonResponse::Confirm => Ok(stream),
-            d @ DaemonResponse::Deny => Err(ConnectionErrors::RequestDenied(d))
+            DaemonResponse::Deny(reason) => Err(ConnectionErrors::RequestDenied(reason))
         }
     } else {
         Err( ConnectionErrors::ConnectionFailed )
     }
 }
 
-fn create_pipe(pipe_name : &str) {
+fn init_or_fail(request : ClientRequestHeader) -> UnixStream {
+    match init_connection(request) {
+        Ok(stream) => stream,
+        Err(err) => match err {
+            ConnectionErrors::RequestDenied(reason) => panic!("Operation failed: {}", reason),
+            ConnectionErrors::ConnectionFailed => panic!("Could not connect to Pipette daemon. Are you sure it is running?")
+        }
+    }
+}
 
+fn create_pipe(pipe_name : &str) {
+    let _stream = init_or_fail(ClientRequestHeader::CreatePipePair(pipe_name.to_owned()));
+    //We're actually done
 }
 
 fn read_spout(pipe_name : &str) {
-    let msg = ClientRequestHeader::ReadFromSpout(pipe_name.to_owned());
+    let _stream = init_or_fail(ClientRequestHeader::CreatePipePair(pipe_name.to_owned()));
+    
 }
 
 fn write_sink(pipe_name : &str) {
+    let _stream = init_or_fail(ClientRequestHeader::CreatePipePair(pipe_name.to_owned()));
 
-}
-
-fn print_no_socket() {
-    println!("Could not connect to pipette. Are you sure the daemon is running?")
 }
