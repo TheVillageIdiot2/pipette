@@ -7,8 +7,11 @@ extern crate pipette;
 use clap::{App, ArgGroup};
 
 use std::os::unix::net::{UnixStream};
+use std::io::{Read, Write, stdin, stdout};
 
 use pipette::ipc::*;
+use pipette::pipes::{pump};
+
 
 enum ConnectionErrors {
     RequestDenied(String),
@@ -88,12 +91,19 @@ fn init_or_fail(request : ClientRequestHeader) -> UnixStream {
 
 fn create_pipe(pipe_name : &str) {
     let _stream = init_or_fail(ClientRequestHeader::CreatePipePair(pipe_name.to_owned()));
-    //We're actually done
+
+    //We're actually done unless we failed, in which case we're also done
 }
 
 fn read_spout(pipe_name : &str) {
-    let _stream = init_or_fail(ClientRequestHeader::CreatePipePair(pipe_name.to_owned()));
-    
+    // Connect to daemon
+    let stream = init_or_fail(ClientRequestHeader::CreatePipePair(pipe_name.to_owned()));
+
+    // Pump out of Daemon forever
+    pump(stream, stdout);
+    let out = stdout();
+
+    stream.for_each(move |b| out.writej
 }
 
 fn write_sink(pipe_name : &str) {
