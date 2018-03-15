@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 extern crate clap;
 extern crate serde;
 extern crate serde_json;
@@ -7,10 +8,10 @@ extern crate pipette;
 use clap::{App, ArgGroup};
 
 use std::os::unix::net::{UnixStream};
-use std::io::{Read, Write, stdin, stdout};
+use std::io;
+use io::{Read, Write};
 
 use pipette::ipc::*;
-use pipette::pipes::{pump};
 
 
 enum ConnectionErrors {
@@ -69,10 +70,11 @@ fn init_connection(request : ClientRequestHeader) -> Result<UnixStream, Connecti
         send_request_header(request, &mut stream);
 
         // Get back response
-        let response = read_response_header(&mut stream);
+        let response = read_header(&mut stream);
         match response {
-            DaemonResponse::Confirm => Ok(stream),
-            DaemonResponse::Deny(reason) => Err(ConnectionErrors::RequestDenied(reason))
+            Err(_) => Err(ConnectionErrors::RequestDenied(String::from("Malformed request"))),
+            Ok(DaemonResponse::Confirm) => Ok(stream),
+            Ok(DaemonResponse::Deny(reason)) => Err(ConnectionErrors::RequestDenied(reason))
         }
     } else {
         Err( ConnectionErrors::ConnectionFailed )
@@ -100,10 +102,11 @@ fn read_spout(pipe_name : &str) {
     let stream = init_or_fail(ClientRequestHeader::CreatePipePair(pipe_name.to_owned()));
 
     // Pump out of Daemon forever
-    pump(stream, stdout);
-    let out = stdout();
+    // pump(stream, stdout);
+    let out = io::stdout();
 
-    stream.for_each(move |b| out.writej
+    //stream.for_each(move |b| out.write
+    
 }
 
 fn write_sink(pipe_name : &str) {

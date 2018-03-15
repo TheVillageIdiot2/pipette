@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 extern crate daemonize;
 #[macro_use] extern crate log;
 

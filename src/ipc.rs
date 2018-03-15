@@ -2,8 +2,9 @@ use std::os::unix::net::UnixStream;
 
 static TERMINATOR : &[u8] = b"!#TERM_HEADER#!";
 
-
 use serde_json;
+use serde::de::DeserializeOwned;
+use std::io;
 use std::io::{Read, Write};
 use std::string::String;
 
@@ -30,7 +31,7 @@ pub fn send_request_header(request : ClientRequestHeader, stream : &mut UnixStre
     stream.write_all(TERMINATOR);
 }
 
-fn read_until(stream : &mut Read, term : &[u8]) -> Result<String, ()> {
+fn read_until(stream : &mut Read, term : &[u8]) -> io::Result<String> {
     // Read until header. Performed char by char. Messy, but oh well
     let mut byte_buff = [0 as u8 ; 1];
     let mut read_so_far : Vec<u8> = Vec::new();
@@ -39,10 +40,7 @@ fn read_until(stream : &mut Read, term : &[u8]) -> Result<String, ()> {
     // Loop until found terminator
     while last_n != term {
         // Get one character
-        match stream.read_exact(&mut byte_buff) {
-            std::io::Result::Err => return Err(()),
-            std::io::Result::Ok(_) => ;
-        };
+        stream.read_exact(&mut byte_buff)?;
         let next_byte = &mut byte_buff[0];
         read_so_far.push(*next_byte);
         last_n.push(*next_byte);
@@ -60,9 +58,11 @@ fn read_until(stream : &mut Read, term : &[u8]) -> Result<String, ()> {
     Ok(read_so_far)
 }
 
-pub fn read_header<T>(stream : &mut Read) -> Result<T, ()> {
+pub fn read_header<'a, T>(stream : &mut Read) -> io::Result<T> where T: DeserializeOwned {
     // Try to parse header as, well, the header
     let header_text = read_until(stream, TERMINATOR)?;
-    serde_json::from_str(header_text.as_str())
+    let header_struct : T = serde_json::from_str(header_text.as_str())?;
+
+    Ok(header_struct)
 }
 
